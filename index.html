@@ -1,0 +1,390 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Study Buddy</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      background: linear-gradient(160deg, #0a0a1a 0%, #0f0f2e 50%, #0a0a1a 100%);
+      font-family: 'DM Sans', sans-serif;
+      color: #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 12px 0;
+    }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+
+    .header { text-align: center; margin-bottom: 20px; }
+    .header h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 26px; font-weight: 700;
+      background: linear-gradient(90deg, #a78bfa, #60a5fa);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .header p { color: #64748b; font-size: 13px; margin-top: 4px; }
+
+    .modes {
+      display: flex; gap: 6px; margin-bottom: 16px;
+      background: #0f172a; padding: 5px; border-radius: 12px;
+      border: 1px solid #1e293b; flex-wrap: wrap; justify-content: center;
+    }
+    .mode-btn {
+      padding: 7px 14px; border-radius: 8px; border: none;
+      cursor: pointer; font-size: 13px; font-weight: 500;
+      background: transparent; color: #64748b;
+      transition: all 0.2s; font-family: 'DM Sans', sans-serif;
+    }
+    .mode-btn.active {
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      color: #fff;
+    }
+
+    .chat-window {
+      width: 100%; max-width: 680px;
+      background: #0d1117;
+      border: 1px solid #1e293b;
+      border-radius: 20px;
+      display: flex; flex-direction: column;
+      height: calc(100vh - 230px); max-height: 520px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+
+    .messages {
+      flex: 1; overflow-y: auto;
+      padding: 20px 16px 8px;
+    }
+
+    .message { display: flex; margin-bottom: 14px; }
+    .message.user { justify-content: flex-end; }
+    .avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: linear-gradient(135deg, #6366f1, #a78bfa);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; flex-shrink: 0; margin-right: 8px; margin-top: 2px;
+    }
+    .bubble {
+      max-width: 78%; padding: 11px 16px;
+      font-size: 14px; line-height: 1.65;
+      white-space: pre-wrap; word-break: break-word;
+    }
+    .bubble.ai {
+      background: #1e293b; color: #e2e8f0;
+      border: 1px solid #334155;
+      border-radius: 16px 16px 16px 4px;
+    }
+    .bubble.user {
+      background: linear-gradient(135deg, #4f46e5, #6d28d9);
+      color: #fff; border-radius: 16px 16px 4px 16px;
+    }
+
+    .typing { display: flex; align-items: center; gap: 5px; padding: 10px 0; }
+    .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #a78bfa;
+      animation: bounce 1.2s infinite;
+    }
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce {
+      0%,80%,100%{ transform: translateY(0); }
+      40%{ transform: translateY(-8px); }
+    }
+
+    /* Flashcards */
+    .flashcard-wrap { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 8px 0; }
+    .fc-info { font-size: 13px; color: #94a3b8; }
+    .flashcard {
+      width: 100%; max-width: 420px; min-height: 160px;
+      background: linear-gradient(135deg, #1e1b4b, #312e81);
+      border-radius: 16px; padding: 28px; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      border: 1px solid #4338ca;
+      box-shadow: 0 8px 32px rgba(79,70,229,0.3);
+      transition: all 0.3s ease; text-align: center;
+    }
+    .flashcard.flipped { background: linear-gradient(135deg, #4f46e5, #7c3aed); }
+    .fc-label { font-size: 11px; letter-spacing: 2px; color: #a78bfa; margin-bottom: 12px; text-transform: uppercase; }
+    .fc-text { font-size: 17px; color: #f1f5f9; font-family: Georgia, serif; line-height: 1.5; }
+    .fc-hint { font-size: 11px; color: #6366f1; margin-top: 14px; }
+    .fc-btns { display: flex; gap: 10px; }
+    .fc-btn {
+      padding: 8px 20px; color: #fff; border: none;
+      border-radius: 8px; cursor: pointer; font-size: 13px;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .fc-btn.got { background: #059669; }
+    .fc-btn.again { background: #dc2626; }
+    .fc-btn.nav {
+      padding: 8px 16px; background: #1e293b; color: #94a3b8;
+      border: 1px solid #334155;
+    }
+
+    .input-area {
+      padding: 12px 14px;
+      border-top: 1px solid #1e293b;
+      display: flex; gap: 8px; align-items: flex-end;
+    }
+    textarea {
+      flex: 1; background: #1e293b; color: #e2e8f0;
+      border: 1px solid #334155; border-radius: 12px;
+      padding: 10px 14px; font-size: 14px; line-height: 1.5;
+      font-family: 'DM Sans', sans-serif; resize: none;
+    }
+    textarea:focus { outline: none; border-color: #4f46e5; }
+    .send-btn {
+      width: 42px; height: 42px;
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      border: none; border-radius: 12px;
+      cursor: pointer; font-size: 18px; color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: all 0.2s;
+    }
+    .send-btn:disabled { background: #1e293b; cursor: default; }
+    .footer { color: #1e293b; font-size: 11px; margin: 10px 0; text-align: center; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div style="font-size:32px;margin-bottom:6px">📚</div>
+  <h1>AI Study Buddy</h1>
+  <p>Your personal AI-powered tutor</p>
+</div>
+
+<div class="modes">
+  <button class="mode-btn active" onclick="switchMode('Chat Tutor')">💬 Chat Tutor</button>
+  <button class="mode-btn" onclick="switchMode('Quiz Me')">🧠 Quiz Me</button>
+  <button class="mode-btn" onclick="switchMode('Flashcards')">🃏 Flashcards</button>
+  <button class="mode-btn" onclick="switchMode('Summarize')">📋 Summarize</button>
+</div>
+
+<div class="chat-window">
+  <div class="messages" id="messages"></div>
+  <div class="input-area">
+    <textarea id="input" rows="2" placeholder="Ask me anything..."></textarea>
+    <button class="send-btn" id="sendBtn" onclick="sendMessage()">→</button>
+  </div>
+</div>
+
+<p class="footer">Powered by Claude AI</p>
+
+<script>
+  const ANTHROPIC_API_KEY = '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'; // Replace with your key
+
+  const systemPrompts = {
+    'Chat Tutor': 'You are an expert, friendly study tutor. Answer the student\'s questions clearly and concisely. Use examples and analogies. Keep responses focused and educational.',
+    'Quiz Me': 'You are a quiz master. When the student gives you a topic, generate 3 multiple-choice questions (A/B/C/D) one at a time. After the student answers, tell them if correct and explain why. Keep it engaging.',
+    'Flashcards': 'You are a flashcard generator. When given a topic or notes, generate 5 flashcards in this exact JSON format only, no extra text:\n[{"front":"Question","back":"Answer"}]',
+    'Summarize': 'You are a summarization expert. Provide a structured summary with: 1) Key Concepts (bullets), 2) Main Takeaways (2-3 sentences), 3) Remember This (one golden insight).'
+  };
+
+  const placeholders = {
+    'Chat Tutor': 'Ask me anything... (e.g. Explain photosynthesis)',
+    'Quiz Me': 'Enter a topic to get quizzed on...',
+    'Flashcards': 'Enter a topic or paste your notes...',
+    'Summarize': 'Paste text or enter a topic to summarize...'
+  };
+
+  let currentMode = 'Chat Tutor';
+  let messages = [];
+
+  function init() {
+    addMessage('ai', "Hey! 👋 I'm your AI Study Buddy. Pick a mode above and let's get learning. What subject are we tackling today?");
+  }
+
+  function switchMode(mode) {
+    currentMode = mode;
+    messages = [];
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById('input').placeholder = placeholders[mode];
+    document.getElementById('messages').innerHTML = '';
+    const intros = {
+      'Chat Tutor': "Switched to Chat Tutor! Ask me anything about any subject.",
+      'Quiz Me': "Quiz Me mode! Tell me a topic and I'll quiz you with multiple-choice questions!",
+      'Flashcards': "Flashcards mode! Give me a topic or paste your notes.",
+      'Summarize': "Summarize mode! Paste text or give me a topic."
+    };
+    addMessage('ai', intros[mode]);
+  }
+
+  function addMessage(role, content, isFlashcards = false, cards = null) {
+    const container = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = `message ${role}`;
+
+    if (role === 'ai') {
+      if (isFlashcards && cards) {
+        div.innerHTML = `<div class="avatar">🤖</div><div class="bubble ai">${renderFlashcards(cards)}</div>`;
+        container.appendChild(div);
+        setupFlashcards(cards);
+      } else {
+        div.innerHTML = `<div class="avatar">🤖</div><div class="bubble ai">${escapeHtml(content)}</div>`;
+        container.appendChild(div);
+      }
+    } else {
+      div.innerHTML = `<div class="bubble user">${escapeHtml(content)}</div>`;
+      container.appendChild(div);
+    }
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function escapeHtml(text) {
+    return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+  }
+
+  function showTyping() {
+    const container = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = 'message ai'; div.id = 'typing';
+    div.innerHTML = `<div class="avatar">🤖</div><div class="bubble ai"><div class="typing"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>`;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function hideTyping() {
+    const t = document.getElementById('typing');
+    if (t) t.remove();
+  }
+
+  async function sendMessage() {
+    const input = document.getElementById('input');
+    const text = input.value.trim();
+    if (!text) return;
+
+    input.value = '';
+    addMessage('user', text);
+    messages.push({ role: 'user', content: text });
+
+    document.getElementById('sendBtn').disabled = true;
+    showTyping();
+
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          system: systemPrompts[currentMode],
+          messages: messages
+        })
+      });
+
+      const data = await res.json();
+      const reply = data.content?.map(b => b.text || '').join('') || 'Sorry, something went wrong.';
+      messages.push({ role: 'assistant', content: reply });
+
+      hideTyping();
+
+      if (currentMode === 'Flashcards') {
+        try {
+          const clean = reply.replace(/```json|```/g, '').trim();
+          const cards = JSON.parse(clean);
+          addMessage('ai', reply, true, cards);
+        } catch {
+          addMessage('ai', reply);
+        }
+      } else {
+        addMessage('ai', reply);
+      }
+    } catch (err) {
+      hideTyping();
+      addMessage('ai', '⚠️ Something went wrong. Please check your API key and try again.');
+    }
+
+    document.getElementById('sendBtn').disabled = false;
+  }
+
+  // Flashcard logic
+  let fcState = { cards: [], index: 0, flipped: false, known: [] };
+
+  function renderFlashcards(cards) {
+    return `<div class="flashcard-wrap" id="fcWrap">
+      <div class="fc-info" id="fcInfo">Card 1 of ${cards.length} • 0 known</div>
+      <div class="flashcard" id="fc" onclick="flipCard()">
+        <div class="fc-label">Question</div>
+        <div class="fc-text" id="fcText">${escapeHtml(cards[0].front)}</div>
+        <div class="fc-hint">Tap to reveal answer</div>
+      </div>
+      <div class="fc-btns" id="fcBtns">
+        <button class="fc-btn nav" onclick="prevCard()">← Prev</button>
+        <button class="fc-btn nav" onclick="nextCard()">Next →</button>
+      </div>
+    </div>`;
+  }
+
+  function setupFlashcards(cards) {
+    fcState = { cards, index: 0, flipped: false, known: [] };
+  }
+
+  function flipCard() {
+    fcState.flipped = !fcState.flipped;
+    const fc = document.getElementById('fc');
+    const fcText = document.getElementById('fcText');
+    const fcBtns = document.getElementById('fcBtns');
+    const card = fcState.cards[fcState.index];
+
+    if (fcState.flipped) {
+      fc.classList.add('flipped');
+      fc.querySelector('.fc-label').textContent = 'Answer';
+      fcText.textContent = card.back;
+      fc.querySelector('.fc-hint').textContent = 'Tap to see question';
+      fcBtns.innerHTML = `<button class="fc-btn got" onclick="markKnown()">✓ Got it</button><button class="fc-btn again" onclick="markAgain()">✗ Review again</button>`;
+    } else {
+      fc.classList.remove('flipped');
+      fc.querySelector('.fc-label').textContent = 'Question';
+      fcText.textContent = card.front;
+      fc.querySelector('.fc-hint').textContent = 'Tap to reveal answer';
+      fcBtns.innerHTML = `<button class="fc-btn nav" onclick="prevCard()">← Prev</button><button class="fc-btn nav" onclick="nextCard()">Next →</button>`;
+    }
+  }
+
+  function nextCard() {
+    fcState.index = (fcState.index + 1) % fcState.cards.length;
+    fcState.flipped = false;
+    updateCard();
+  }
+
+  function prevCard() {
+    fcState.index = (fcState.index - 1 + fcState.cards.length) % fcState.cards.length;
+    fcState.flipped = false;
+    updateCard();
+  }
+
+  function markKnown() {
+    if (!fcState.known.includes(fcState.index)) fcState.known.push(fcState.index);
+    nextCard();
+  }
+
+  function markAgain() {
+    fcState.known = fcState.known.filter(k => k !== fcState.index);
+    nextCard();
+  }
+
+  function updateCard() {
+    const card = fcState.cards[fcState.index];
+    const fc = document.getElementById('fc');
+    fc.classList.remove('flipped');
+    fc.querySelector('.fc-label').textContent = 'Question';
+    document.getElementById('fcText').textContent = card.front;
+    fc.querySelector('.fc-hint').textContent = 'Tap to reveal answer';
+    document.getElementById('fcBtns').innerHTML = `<button class="fc-btn nav" onclick="prevCard()">← Prev</button><button class="fc-btn nav" onclick="nextCard()">Next →</button>`;
+    const pct = Math.round((fcState.known.length / fcState.cards.length) * 100);
+    document.getElementById('fcInfo').textContent = `Card ${fcState.index + 1} of ${fcState.cards.length} • ${fcState.known.length} known (${pct}%)`;
+  }
+
+  document.getElementById('input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+
+  init();
+</script>
+</body>
+</html>
